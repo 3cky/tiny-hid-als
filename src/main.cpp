@@ -31,7 +31,7 @@
 PROGMEM const uchar usbHidReportDescriptor[USB_CFG_HID_REPORT_DESCRIPTOR_LENGTH] = {
   HID_USAGE_PAGE_SENSOR,         // USAGE_PAGE (Sensor)
   HID_USAGE_SENSOR_TYPE_LIGHT_AMBIENTLIGHT, // USAGE (AmbientLight)
-  HID_COLLECTION(Physical),
+  HID_COLLECTION(Application),
 
   //feature reports (xmit/receive)
   HID_USAGE_PAGE_SENSOR,

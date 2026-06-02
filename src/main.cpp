@@ -27,6 +27,9 @@
 #define LED_ON() digitalWrite(LED_BUILTIN, 1)
 #define LED_TOGGLE() digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN))
 
+// Main loop delay / report-cadence resolution, in milliseconds
+#define LOOP_DELAY_MS 2
+
 // HID Report Descriptor
 PROGMEM const uchar usbHidReportDescriptor[USB_CFG_HID_REPORT_DESCRIPTOR_LENGTH] = {
   HID_USAGE_PAGE_SENSOR,         // USAGE_PAGE (Sensor)
@@ -236,7 +239,7 @@ uint16_t bytesRemaining;
 bool getInputRequested = false;
 
 bool timeout = false;
-uint8_t timeoutCounter = 0;
+uint32_t elapsedMs = 0;
 
 BH1750 lightSensor;
 
@@ -253,7 +256,7 @@ void setup() {
   cli();
   usbInit();
   usbDeviceDisconnect(); /* enforce re-enumeration */
-  while (--timeoutCounter) { /* fake USB disconnect for > 250 ms */
+  for (uint8_t i = 0; i < 250; i++) { /* fake USB disconnect for > 250 ms */
     _delay_ms(1);
   }
   usbDeviceConnect();
@@ -282,9 +285,17 @@ void loop() {
     /* called after every poll of the interrupt endpoint */
     usbSetInterrupt((uchar *)&inputReportBuf, sizeof(inputReportBuf));
   }
-  _delay_ms(2);
-  if (!--timeoutCounter) {
+  _delay_ms(LOOP_DELAY_MS);
+  // Honor the host-configured report interval, clamped to the advertised
+  // minimum (a reportInterval of 0 means "as fast as the minimum allows")
+  elapsedMs += LOOP_DELAY_MS;
+  uint32_t reportInterval = featureReportBuf.reportInterval;
+  if (reportInterval < featureReportBuf.minReportInterval) {
+    reportInterval = featureReportBuf.minReportInterval;
+  }
+  if (elapsedMs >= reportInterval) {
     timeout = true;
+    elapsedMs = 0;
   }
 }
 
